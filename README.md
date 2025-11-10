@@ -1,150 +1,130 @@
-# 🏋️ Lifestyle Pass – Backend (Laravel API)
+# Lifestyle Pass
 
-The **Lifestyle Pass** backend provides the REST API, database models, and authentication for the Lifestyle Pass mobile app.  
-It is built using **Laravel** and **MySQL**, with optional integration for **Stripe payments** and **QR code check-ins**.
+A mobile-first membership system that allows users to sign up, check in at venues, and manage their subscriptions.  
+Built with **Laravel (backend)** and **React Native + Expo (frontend)**.
 
----
+## 🏗️ Tech Stack
 
-## ⚙️ Tech Stack
+| Layer    | Technology           | Purpose                                |
+|----------|----------------------|----------------------------------------|
+| Backend  | Laravel (PHP)        | API, authentication, business logic    |
+| Database | MySQL                | Persistent data store                  |
+| Frontend | React Native (Expo)  | Mobile & web client interface          |
+| Auth     | Laravel Sanctum      | Token-based authentication             |
 
-- **Framework:** Laravel 11 (PHP 8.2+)
-- **Database:** MySQL / MariaDB
-- **Auth:** Laravel Sanctum (token-based API)
-- **Payment (planned):** Stripe
-- **Frontend clients:** React Native (mobile), Laravel/React (web)
+## ⚙️ Backend Setup
 
----
+1. **Navigate to backend folder:**  
+    cd backend
 
-## 🚀 Setup Instructions
-
-### 1️⃣ Clone the repository
-
-    git clone https://github.com/<your-username>/lifestylepass-backend.git
-    cd lifestylepass-backend
-
-### 2️⃣ Install dependencies
-
+2. **Install dependencies:**  
     composer install
 
-If Composer isn’t installed, see:  
-[https://getcomposer.org/download/](https://getcomposer.org/download/)
-
----
-
-### 3️⃣ Environment setup
-
-Copy the example file and update environment variables:
-
+3. **Create environment file:**  
     cp .env.example .env
 
-Edit `.env` and configure your database connection:
+4. **Configure .env:**  
+    DB_CONNECTION=mysql  
+    DB_HOST=127.0.0.1  
+    DB_PORT=3306  
+    DB_DATABASE=lifestylepass  
+    DB_USERNAME=your_username  
+    DB_PASSWORD=your_password
 
-    DB_CONNECTION=mysql
-    DB_HOST=127.0.0.1
-    DB_PORT=3306
-    DB_DATABASE=lifestyle_pass
-    DB_USERNAME=root
-    DB_PASSWORD=yourpassword
-
-Generate the application key:
-
-    php artisan key:generate
-
----
-
-### 4️⃣ Run database migrations
-
+5. **Generate app key & migrate:**  
+    php artisan key:generate  
     php artisan migrate
 
-This creates all required tables in your configured database.
+6. **Start server:**  
+    php artisan serve  
 
----
+   The API will run at:  
+   http://127.0.0.1:8000
 
-### 5️⃣ Start the local development server
+## 📱 Frontend Setup
 
-    php artisan serve
+1. **Navigate to frontend folder:**  
+    cd mobile
 
-The API will be available at:
+2. **Install dependencies:**  
+    npm install
 
-👉 [http://127.0.0.1:8000](http://127.0.0.1:8000)
+3. **Start the Expo app:**  
+    npm start
 
----
+4. **Run on web (simplest for local testing):**  
+   Press **w** in the terminal.
 
-## 🧪 Testing the API
+5. **Run on phone (optional):**  
+   - Download the Expo Go app  
+   - Scan the QR code shown in the terminal
 
-### Test the base route
+## 🔌 API Endpoints
 
-    curl http://127.0.0.1:8000/api/test
+| Method | Endpoint     | Description                        |
+|--------|--------------|------------------------------------|
+| POST   | /api/signup  | Register a new user                |
+| POST   | /api/login   | Login and receive token            |
+| GET    | /api/me      | Get current authenticated user     |
+| GET    | /api/venues  | List all venues (currently public) |
 
-Expected response:
+## 🧱 Current Project State
 
-    {"message": "API is alive"}
+### Backend (Laravel)
 
----
+- Laravel installed and running via `php artisan serve`
+- Database connected (MySQL)
+- `/api/signup` and `/api/login` working
+- Token authentication (Sanctum) functional
+- `/api/venues` endpoint returning data (temporarily public)
+- `Venue` model and migration created
+- Test data inserted using `php artisan tinker`
 
-### Example: User Signup
+### Frontend (React Native + Expo)
 
-    curl -X POST http://127.0.0.1:8000/api/signup \
-      -H "Content-Type: application/json" \
-      -d '{
-        "name": "Craig Tester",
-        "email": "craig@example.com",
-        "password": "secret1234"
-      }'
+- Expo app created in the `mobile` folder
+- Using new Expo Router (`app/(tabs)/index.tsx`)
+- Connected to backend `/api/venues`
+- Venue list displays correctly in app or web
+- Next step: handle CORS properly (for web)
+- Next step: add login + token storage
 
-Expected response:
+## 🧭 Next Steps
 
-    {
-      "user": {
-        "id": 1,
-        "name": "Craig Tester",
-        "email": "craig@example.com"
-      }
-    }
+1. **Frontend:** Add login screen  
+   Build a form that sends credentials to `/api/login` and stores the returned token.
 
----
+2. **Backend:** Add `/api/checkins`  
+   Create a `Checkin` model and migration, and allow users to POST check-ins.
 
-## 🧩 Project Structure
+3. **Frontend:** Add "Check-in" button per venue  
+   Send POST requests to `/api/checkins` using the stored token.
 
-    app/
-     ├── Http/
-     │   ├── Controllers/Api/AuthController.php
-     │   └── Middleware/
-     ├── Models/
-     │   └── User.php
-    bootstrap/
-    config/
-    database/
-     ├── migrations/
-    public/
-    routes/
-     ├── api.php
-     └── web.php
+4. **Backend:** Add `/api/payouts`  
+   For venue reports and analytics (future feature).
 
----
+## 🧠 Notes to Self
 
-## 🔐 Next Steps
+- If `/api/venues` returns 401, check whether the route is behind `auth:sanctum`.
+- If Expo web shows a CORS error, enable CORS in Laravel middleware.
+- Keep `.env` out of GitHub (already in `.gitignore`).
+- Update this README whenever new routes or features are added.
 
-1. Add **Laravel Sanctum** for API token authentication.  
-2. Add models:
-   - `Venue`
-   - `Subscription`
-   - `Checkin`
-   - `Payout`  
-3. Build `/api/venues` and `/api/checkins` endpoints.  
-4. Integrate **Stripe** for membership payments.
+## 🏁 Vision Snapshot
 
----
+A mobile-first app where users:  
 
-## 🧰 Development Notes
+- Sign up and manage their membership  
+- View partner venues  
+- Check in via QR codes  
 
-- All API responses are **JSON**.  
-- Avoid committing `.env` or `vendor/` folders.  
-- Log files are stored in `storage/logs/laravel.log`.  
-- Use MySQL Workbench or phpMyAdmin for DB visualization.
+And where venues/admins (future work) can:  
 
----
+- View check-in activity  
+- See reports and payouts  
 
-## 📜 License
+## 📚 References
 
-This project is licensed under the [MIT License](LICENSE).
+- Laravel Docs: https://laravel.com/docs  
+- React Native Docs: https://reactnative.dev/  
+- Expo Docs: https://docs.expo.dev/

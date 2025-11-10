@@ -23,9 +23,12 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
-        // For now, just return the user; no tokens yet.
+        // Create a Sanctum token for API/mobile use
+        $token = $user->createToken('mobile')->plainTextToken;
+
         return response()->json([
-            'user' => $user,
+            'user'  => $user,
+            'token' => $token,
         ], 201);
     }
 
@@ -42,8 +45,11 @@ class AuthController extends Controller
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
 
+        $token = $user->createToken('mobile')->plainTextToken;
+
         return response()->json([
-            'user' => $user,
+            'user'  => $user,
+            'token' => $token,
         ]);
     }
 }

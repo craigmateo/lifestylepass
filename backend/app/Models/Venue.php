@@ -9,9 +9,9 @@ class Venue extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name','address','type','owner_id'];
-
-    public function owner() { return $this->belongsTo(User::class, 'owner_id'); }
-    public function checkins() { return $this->hasMany(Checkin::class); }
-    public function payouts() { return $this->hasMany(Payout::class); }
+    protected $fillable = [
+        'name',
+        'address',
+        'type',
+    ];
 }
