@@ -10,13 +10,19 @@ class CheckinController extends Controller
 {
     public function store(Request $request)
     {
-        $request->validate(['venue_id' => 'required|exists:venues,id']);
+        // user must be authenticated (via Sanctum)
         $user = $request->user();
-        $checkin = Checkin::create([
-            'user_id' => $user->id,
-            'venue_id' => $request->venue_id,
-            'timestamp' => now(),
+
+        $validated = $request->validate([
+            'venue_id' => 'required|exists:venues,id',
         ]);
+
+        $checkin = Checkin::create([
+            'user_id'  => $user->id,
+            'venue_id' => $validated['venue_id'],
+            'timestamp'=> now(),
+        ]);
+
         return response()->json($checkin, 201);
     }
 }

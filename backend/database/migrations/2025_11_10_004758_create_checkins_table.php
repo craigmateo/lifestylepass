@@ -10,15 +10,16 @@ return new class extends Migration
      * Run the migrations.
      */
     public function up(): void
-    {
-        Schema::create('checkins', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('user_id')->constrained();
-            $table->foreignId('venue_id')->constrained();
-            $table->timestamp('timestamp')->useCurrent();
-            $table->timestamps();
-        });
-    }
+{
+    Schema::create('checkins', function (Blueprint $table) {
+        $table->id();
+        $table->foreignId('user_id')->constrained()->onDelete('cascade');
+        $table->foreignId('venue_id')->constrained()->onDelete('cascade');
+        $table->timestamp('timestamp')->useCurrent();
+        $table->timestamps();
+    });
+}
+
 
     /**
      * Reverse the migrations.
