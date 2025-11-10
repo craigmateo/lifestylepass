@@ -1,0 +1,31 @@
+# Laravel defaults
+/vendor/
+node_modules/
+public/storage
+storage/*.key
+.env
+.env.backup
+.env.local
+.env.development
+.env.production
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# IDE / editor files
+.idea/
+.vscode/
+*.log
+*.sqlite
+
+# Cache / build artifacts
+bootstrap/cache/*.php
+composer.lock
+npm-debug.log
+yarn-error.log
+
+# Optional: temporary scripts or data
+*.bak
+*.tmp
+*.swp
