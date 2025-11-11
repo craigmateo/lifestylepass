@@ -13,15 +13,16 @@ Route::get('/test', function () {
 Route::post('/signup', [AuthController::class, 'signup']);
 Route::post('/login', [AuthController::class, 'login']);
 
-// Public for now (easy to test)
+// Public for now
 Route::get('/venues', [VenueController::class, 'index']);
 
-// Protected routes (need Bearer token)
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', function (Request $request) {
         return $request->user();
     });
 
     Route::post('/checkins', [CheckinController::class, 'store']);
+    Route::get('/my-checkins', [CheckinController::class, 'myCheckins']);
 });
+
 

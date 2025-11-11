@@ -10,7 +10,6 @@ class CheckinController extends Controller
 {
     public function store(Request $request)
     {
-        // user must be authenticated (via Sanctum)
         $user = $request->user();
 
         $validated = $request->validate([
@@ -24,5 +23,17 @@ class CheckinController extends Controller
         ]);
 
         return response()->json($checkin, 201);
+    }
+
+    public function myCheckins(Request $request)
+    {
+        $user = $request->user();
+
+        $checkins = Checkin::with('venue')
+            ->where('user_id', $user->id)
+            ->orderBy('timestamp', 'desc')
+            ->get();
+
+        return response()->json($checkins);
     }
 }
