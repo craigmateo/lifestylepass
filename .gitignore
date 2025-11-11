@@ -1,4 +1,7 @@
-# Laravel defaults
+# ====================================
+# Laravel (Backend)
+# ====================================
+
 /vendor/
 node_modules/
 public/storage
@@ -9,23 +12,56 @@ storage/*.key
 .env.development
 .env.production
 
-# OS-specific
-.DS_Store
-Thumbs.db
-
-# IDE / editor files
-.idea/
-.vscode/
-*.log
-*.sqlite
-
 # Cache / build artifacts
 bootstrap/cache/*.php
 composer.lock
 npm-debug.log
 yarn-error.log
 
-# Optional: temporary scripts or data
+# Logs and temp files
+*.log
 *.bak
 *.tmp
 *.swp
+
+# ====================================
+# React Native (Frontend)
+# ====================================
+
+# Dependencies
+/mobile/node_modules/
+/mobile/.expo/
+/mobile/.expo-shared/
+/mobile/.expo/*
+/mobile/yarn.lock
+/mobile/package-lock.json
+
+# Environment files
+/mobile/.env
+/mobile/.env.*.local
+
+# Metro bundler & Expo cache
+/mobile/.metro-cache/
+/mobile/dist/
+/mobile/web-build/
+/mobile/.cache/
+
+# System-specific files
+.DS_Store
+Thumbs.db
+
+# IDE / editor files
+.idea/
+.vscode/
+
+# OS-specific
+Desktop.ini
+
+# ====================================
+# Miscellaneous
+# ====================================
+
+# Temporary data or private notes
+*.sqlite
+*.local
+notes.txt

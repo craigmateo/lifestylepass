@@ -6,11 +6,12 @@ import {
   FlatList,
   ActivityIndicator,
   StyleSheet,
+  Alert,
+  TouchableOpacity,
 } from 'react-native';
+import { Link, useRouter } from 'expo-router';
+import { getToken, clearToken } from '../../utils/auth';
 
-// If you're running Expo web on the same machine as Laravel,
-// this is fine. If you later use a physical phone, change this
-// to your PC's local IP (e.g. "http://192.168.0.10:8000/api").
 const API_BASE_URL = 'http://127.0.0.1:8000/api';
 
 type Venue = {
@@ -20,51 +21,199 @@ type Venue = {
   type?: string | null;
 };
 
+type MeResponse = {
+  id: number;
+  name: string;
+  email: string;
+};
+
 const HomeScreen: React.FC = () => {
+  const router = useRouter();
+
   const [venues, setVenues] = useState<Venue[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loadingVenues, setLoadingVenues] = useState<boolean>(true);
+  const [venuesError, setVenuesError] = useState<string | null>(null);
+
+  const [me, setMe] = useState<MeResponse | null>(null);
+  const [loadingMe, setLoadingMe] = useState<boolean>(true);
+
+  const [lastCheckinMessage, setLastCheckinMessage] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     const loadVenues = async () => {
       try {
-        setLoading(true);
-        setError(null);
+        setLoadingVenues(true);
+        setVenuesError(null);
 
         const res = await fetch(`${API_BASE_URL}/venues`);
+        console.log('Venues response status:', res.status);
+
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}`);
         }
 
         const data = (await res.json()) as Venue[];
+        console.log('Venues data from API:', data);
         setVenues(data);
       } catch (err: any) {
-        setError(err.message ?? 'Unknown error');
+        console.log('Venues fetch error:', err);
+        setVenuesError(err.message ?? 'Unknown error');
       } finally {
-        setLoading(false);
+        setLoadingVenues(false);
       }
     };
 
     loadVenues();
   }, []);
 
+  useEffect(() => {
+    const loadMe = async () => {
+      try {
+        setLoadingMe(true);
+        const token = await getToken();
+        if (!token) {
+          setMe(null);
+          return;
+        }
+
+        const res = await fetch(`${API_BASE_URL}/me`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        });
+
+        console.log('Me status:', res.status);
+
+        if (!res.ok) {
+          setMe(null);
+          return;
+        }
+
+        const data = (await res.json()) as MeResponse;
+        setMe(data);
+      } catch (err) {
+        console.log('Error loading /me:', err);
+        setMe(null);
+      } finally {
+        setLoadingMe(false);
+      }
+    };
+
+    loadMe();
+  }, []);
+
+  const handleCheckin = async (venue: Venue) => {
+    try {
+      const token = await getToken();
+      if (!token) {
+        Alert.alert('Not logged in', 'Please log in to check in at a venue.');
+        return;
+      }
+
+      const res = await fetch(`${API_BASE_URL}/checkins`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ venue_id: venue.id }),
+      });
+
+      console.log('Check-in status:', res.status);
+
+      if (!res.ok) {
+        let errData: any = null;
+        try {
+          errData = await res.json();
+        } catch (e) {}
+        console.log('Check-in error body:', errData);
+
+        const message =
+          errData?.message || `Check-in failed with status ${res.status}`;
+        throw new Error(message);
+      }
+
+      const data = await res.json();
+      console.log('Check-in success body:', data);
+
+      const msg = `Checked in at "${venue.name}" (id ${venue.id})`;
+      setLastCheckinMessage(msg);
+      Alert.alert('Check-in successful', msg);
+    } catch (err: any) {
+      console.log('Check-in exception:', err);
+      Alert.alert('Check-in error', err.message ?? 'Unknown error');
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await clearToken();
+      setMe(null);
+      setLastCheckinMessage(null);
+      Alert.alert('Logged out', 'You have been logged out.');
+      router.replace('/login');
+    } catch (err) {
+      console.log('Logout error:', err);
+      Alert.alert('Logout error', 'Something went wrong while logging out.');
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>LifestylePass Venues</Text>
+      {/* Header with title + login/logout */}
+      <View style={styles.headerRow}>
+        <Text style={styles.title}>Lifestyle Pass Venues</Text>
 
-      {loading && (
+        {me ? (
+          <TouchableOpacity onPress={handleLogout}>
+            <Text style={styles.logoutLink}>Logout</Text>
+          </TouchableOpacity>
+        ) : (
+          <Link href="/login" style={styles.loginLink}>
+            Login
+          </Link>
+        )}
+      </View>
+
+      {/* User info row */}
+      <View style={styles.userRow}>
+        {loadingMe ? (
+          <Text style={styles.userText}>Checking login status…</Text>
+        ) : me ? (
+          <Text style={styles.userText}>
+            Logged in as {me.name} ({me.email})
+          </Text>
+        ) : (
+          <Text style={styles.userText}>Not logged in</Text>
+        )}
+      </View>
+
+      {/* Last check-in banner */}
+      {lastCheckinMessage && (
+        <View style={styles.checkinBanner}>
+          <Text style={styles.checkinText}>{lastCheckinMessage}</Text>
+        </View>
+      )}
+
+      {/* Loading / error / list */}
+      {loadingVenues && (
         <View style={styles.center}>
           <ActivityIndicator size="large" />
+          <Text>Loading venues…</Text>
         </View>
       )}
 
-      {!loading && error && (
+      {!loadingVenues && venuesError && (
         <View style={styles.center}>
-          <Text style={styles.errorText}>Error: {error}</Text>
+          <Text style={styles.errorText}>Error: {venuesError}</Text>
         </View>
       )}
 
-      {!loading && !error && (
+      {!loadingVenues && !venuesError && (
         <FlatList
           data={venues}
           keyExtractor={(item) => item.id.toString()}
@@ -73,6 +222,13 @@ const HomeScreen: React.FC = () => {
               <Text style={styles.name}>{item.name}</Text>
               <Text style={styles.address}>{item.address}</Text>
               {!!item.type && <Text style={styles.type}>{item.type}</Text>}
+
+              <TouchableOpacity
+                style={styles.checkinButton}
+                onPress={() => handleCheckin(item)}
+              >
+                <Text style={styles.checkinButtonText}>Check in</Text>
+              </TouchableOpacity>
             </View>
           )}
           ListEmptyComponent={
@@ -95,11 +251,43 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     backgroundColor: '#f5f5f5',
   },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   title: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
-    marginBottom: 16,
-    textAlign: 'center',
+  },
+  loginLink: {
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: '500',
+  },
+  logoutLink: {
+    fontSize: 14,
+    color: '#FF3B30',
+    fontWeight: '500',
+  },
+  userRow: {
+    marginBottom: 8,
+  },
+  userText: {
+    fontSize: 13,
+    color: '#444',
+  },
+  checkinBanner: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    backgroundColor: '#e0f7e9',
+    marginBottom: 10,
+  },
+  checkinText: {
+    fontSize: 13,
+    color: '#2e7d32',
   },
   center: {
     marginTop: 20,
@@ -134,5 +322,16 @@ const styles = StyleSheet.create({
   errorText: {
     color: 'red',
     fontSize: 14,
+  },
+  checkinButton: {
+    marginTop: 10,
+    paddingVertical: 8,
+    borderRadius: 6,
+    backgroundColor: '#007AFF',
+    alignItems: 'center',
+  },
+  checkinButtonText: {
+    color: '#ffffff',
+    fontWeight: '600',
   },
 });
