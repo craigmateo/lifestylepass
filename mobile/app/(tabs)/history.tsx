@@ -12,7 +12,7 @@ import { useRouter } from 'expo-router';
 import { getToken } from '../../utils/auth';
 
 // IMPORTANT: make sure this matches exactly what you use in index.tsx
-const API_BASE_URL = 'http://192.168.80.1:8000/api';
+import { API_BASE_URL } from '../../config';
 
 interface Venue {
   id: number;
@@ -139,7 +139,7 @@ export default function HistoryScreen() {
       </View>
 
       {/* Dropdown menu when hamburger is open */}
-     {menuOpen && (
+    {menuOpen && (
   <View style={styles.menuContainer}>
     <Text
       style={styles.menuItem}
@@ -150,6 +150,7 @@ export default function HistoryScreen() {
     >
       Venues
     </Text>
+
     <Text
       style={styles.menuItem}
       onPress={() => {
@@ -159,6 +160,18 @@ export default function HistoryScreen() {
     >
       My Check-ins
     </Text>
+
+    {/* ✅ New item for QR scanner */}
+    <Text
+      style={styles.menuItem}
+      onPress={() => {
+        router.replace('/scan');
+        setMenuOpen(false);
+      }}
+    >
+      Scan QR
+    </Text>
+
     <Text
       style={styles.menuItem}
       onPress={() => {
@@ -168,6 +181,7 @@ export default function HistoryScreen() {
     >
       Profile
     </Text>
+
     <Text
       style={styles.menuItem}
       onPress={() => {

@@ -11,7 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import { saveToken } from '../utils/auth';
 
-const API_BASE_URL = 'http://192.168.80.1:8000/api';
+import { API_BASE_URL } from '../config';
 
 const LoginScreen: React.FC = () => {
   const router = useRouter();

@@ -12,7 +12,7 @@ import {
 import { Link, useRouter } from 'expo-router';
 import { getToken, clearToken } from '../../utils/auth';
 
-const API_BASE_URL = 'http://192.168.80.1:8000/api';
+import { API_BASE_URL } from '../../config';
 
 type Venue = {
   id: number;
@@ -200,52 +200,56 @@ const HomeScreen: React.FC = () => {
 
 {menuOpen && (
   <View style={styles.menuContainer}>
-    <TouchableOpacity
+    <Text
+      style={styles.menuItem}
       onPress={() => {
         router.replace('/');
         setMenuOpen(false);
       }}
     >
-      <Text style={styles.menuItem}>Venues</Text>
-    </TouchableOpacity>
+      Venues
+    </Text>
 
-    <TouchableOpacity
+    <Text
+      style={styles.menuItem}
       onPress={() => {
         router.replace('/history');
         setMenuOpen(false);
       }}
     >
-      <Text style={styles.menuItem}>My Check-ins</Text>
-    </TouchableOpacity>
+      My Check-ins
+    </Text>
 
-    <TouchableOpacity
+    {/* ✅ New item for QR scanner */}
+    <Text
+      style={styles.menuItem}
+      onPress={() => {
+        router.replace('/scan');
+        setMenuOpen(false);
+      }}
+    >
+      Scan QR
+    </Text>
+
+    <Text
+      style={styles.menuItem}
       onPress={() => {
         router.replace('/profile');
         setMenuOpen(false);
       }}
     >
-      <Text style={styles.menuItem}>Profile</Text>
-    </TouchableOpacity>
+      Profile
+    </Text>
 
-    {me ? (
-      <TouchableOpacity
-        onPress={async () => {
-          await handleLogout();
-          setMenuOpen(false);
-        }}
-      >
-        <Text style={styles.menuItem}>Logout</Text>
-      </TouchableOpacity>
-    ) : (
-      <TouchableOpacity
-        onPress={() => {
-          router.replace('/login');
-          setMenuOpen(false);
-        }}
-      >
-        <Text style={styles.menuItem}>Login</Text>
-      </TouchableOpacity>
-    )}
+    <Text
+      style={styles.menuItem}
+      onPress={() => {
+        router.replace('/login');
+        setMenuOpen(false);
+      }}
+    >
+      Login
+    </Text>
   </View>
 )}
 

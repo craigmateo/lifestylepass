@@ -11,7 +11,7 @@ import { useRouter } from 'expo-router';
 import { getToken } from '../../utils/auth';
 
 // IMPORTANT: make this match index.tsx exactly
-const API_BASE_URL = 'http://192.168.80.1:8000/api';
+import { API_BASE_URL } from '../../config';
 
 type MeResponse = {
   id: number;
@@ -122,45 +122,60 @@ export default function ProfileScreen() {
 
       {/* Dropdown menu when hamburger is open */}
       {menuOpen && (
-        <View style={styles.menuContainer}>
-          <Text
-            style={styles.menuItem}
-            onPress={() => {
-              router.replace('/');
-              setMenuOpen(false);
-            }}
-          >
-            Venues
-          </Text>
-          <Text
-            style={styles.menuItem}
-            onPress={() => {
-              router.replace('/history');
-              setMenuOpen(false);
-            }}
-          >
-            My Check-ins
-          </Text>
-          <Text
-            style={styles.menuItem}
-            onPress={() => {
-              router.replace('/profile');
-              setMenuOpen(false);
-            }}
-          >
-            Profile
-          </Text>
-          <Text
-            style={styles.menuItem}
-            onPress={() => {
-              router.replace('/login');
-              setMenuOpen(false);
-            }}
-          >
-            Login
-          </Text>
-        </View>
-      )}
+  <View style={styles.menuContainer}>
+    <Text
+      style={styles.menuItem}
+      onPress={() => {
+        router.replace('/');
+        setMenuOpen(false);
+      }}
+    >
+      Venues
+    </Text>
+
+    <Text
+      style={styles.menuItem}
+      onPress={() => {
+        router.replace('/history');
+        setMenuOpen(false);
+      }}
+    >
+      My Check-ins
+    </Text>
+
+    {/* ✅ New item for QR scanner */}
+    <Text
+      style={styles.menuItem}
+      onPress={() => {
+        router.replace('/scan');
+        setMenuOpen(false);
+      }}
+    >
+      Scan QR
+    </Text>
+
+    <Text
+      style={styles.menuItem}
+      onPress={() => {
+        router.replace('/profile');
+        setMenuOpen(false);
+      }}
+    >
+      Profile
+    </Text>
+
+    <Text
+      style={styles.menuItem}
+      onPress={() => {
+        router.replace('/login');
+        setMenuOpen(false);
+      }}
+    >
+      Login
+    </Text>
+  </View>
+)}
+
 
       {body}
     </SafeAreaView>
