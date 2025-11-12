@@ -95,13 +95,14 @@ export default function ScanScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingTop: 32, paddingHorizontal: 24, backgroundColor: '#f5f5f5' },
+  container: { flex: 1, paddingTop: 32, paddingHorizontal: 24, margin: 20, backgroundColor: '#f5f5f5' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { marginBottom: 12 },
   title: { fontSize: 20, fontWeight: '700' },
   scannerBox: {
     flex: 1,
     borderRadius: 12,
+    margin: 0,
     overflow: 'hidden',
     backgroundColor: '#000',
   },

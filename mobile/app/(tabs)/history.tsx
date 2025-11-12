@@ -205,6 +205,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 32,
     paddingHorizontal: 24,
+    margin: 16,
     backgroundColor: '#f5f5f5',
   },
   headerRow: {

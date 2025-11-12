@@ -310,6 +310,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 32,        // a bit more top padding
     paddingHorizontal: 24, // more space from left/right edges
+    margin: 16,
     backgroundColor: '#f5f5f5',
   },
   headerRow: {
