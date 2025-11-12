@@ -2,15 +2,15 @@ import { Tabs } from 'expo-router';
 
 export default function TabsLayout() {
   return (
-    <Tabs>
-      <Tabs.Screen
-        name="index"
-        options={{ title: 'Venues', headerShown: true }}
-      />
-      <Tabs.Screen
-        name="history"
-        options={{ title: 'My Check-ins', headerShown: true }}
-      />
+    <Tabs
+      screenOptions={{
+        tabBarStyle: { display: 'none' }, // hide bottom tabs
+        headerShown: false,               // we draw our own headers
+      }}
+    >
+      <Tabs.Screen name="index" />
+      <Tabs.Screen name="history" />
+      <Tabs.Screen name="profile" />
     </Tabs>
   );
 }

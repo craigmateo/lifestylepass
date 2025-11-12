@@ -12,7 +12,7 @@ import {
 import { Link, useRouter } from 'expo-router';
 import { getToken, clearToken } from '../../utils/auth';
 
-const API_BASE_URL = 'http://127.0.0.1:8000/api';
+const API_BASE_URL = 'http://192.168.80.1:8000/api';
 
 type Venue = {
   id: number;
@@ -41,6 +41,8 @@ const HomeScreen: React.FC = () => {
     null
   );
 
+  const [menuOpen, setMenuOpen] = useState(false);
+  
   useEffect(() => {
     const loadVenues = async () => {
       try {
@@ -166,18 +168,22 @@ const HomeScreen: React.FC = () => {
     <SafeAreaView style={styles.container}>
       {/* Header with title + login/logout */}
       <View style={styles.headerRow}>
-        <Text style={styles.title}>Lifestyle Pass Venues</Text>
+      <TouchableOpacity onPress={() => setMenuOpen((prev) => !prev)}>
+        <Text style={styles.menuIcon}>☰</Text>
+      </TouchableOpacity>
 
-        {me ? (
-          <TouchableOpacity onPress={handleLogout}>
-            <Text style={styles.logoutLink}>Logout</Text>
-          </TouchableOpacity>
-        ) : (
-          <Link href="/login" style={styles.loginLink}>
-            Login
-          </Link>
-        )}
-      </View>
+      <Text style={styles.title}>Lifestyle Pass Venues</Text>
+
+      {me ? (
+        <TouchableOpacity onPress={handleLogout}>
+          <Text style={styles.logoutLink}>Logout</Text>
+        </TouchableOpacity>
+      ) : (
+        <Link href="/login" style={styles.loginLink}>
+          Login
+        </Link>
+      )}
+    </View>
 
       {/* User info row */}
       <View style={styles.userRow}>
@@ -191,6 +197,57 @@ const HomeScreen: React.FC = () => {
           <Text style={styles.userText}>Not logged in</Text>
         )}
       </View>
+
+{menuOpen && (
+  <View style={styles.menuContainer}>
+    <TouchableOpacity
+      onPress={() => {
+        router.replace('/');
+        setMenuOpen(false);
+      }}
+    >
+      <Text style={styles.menuItem}>Venues</Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      onPress={() => {
+        router.replace('/history');
+        setMenuOpen(false);
+      }}
+    >
+      <Text style={styles.menuItem}>My Check-ins</Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      onPress={() => {
+        router.replace('/profile');
+        setMenuOpen(false);
+      }}
+    >
+      <Text style={styles.menuItem}>Profile</Text>
+    </TouchableOpacity>
+
+    {me ? (
+      <TouchableOpacity
+        onPress={async () => {
+          await handleLogout();
+          setMenuOpen(false);
+        }}
+      >
+        <Text style={styles.menuItem}>Logout</Text>
+      </TouchableOpacity>
+    ) : (
+      <TouchableOpacity
+        onPress={() => {
+          router.replace('/login');
+          setMenuOpen(false);
+        }}
+      >
+        <Text style={styles.menuItem}>Login</Text>
+      </TouchableOpacity>
+    )}
+  </View>
+)}
 
       {/* Last check-in banner */}
       {lastCheckinMessage && (
@@ -247,8 +304,8 @@ export default HomeScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 40,
-    paddingHorizontal: 16,
+    paddingTop: 32,        // a bit more top padding
+    paddingHorizontal: 24, // more space from left/right edges
     backgroundColor: '#f5f5f5',
   },
   headerRow: {
@@ -260,16 +317,19 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '700',
+    margin: 12,
   },
   loginLink: {
     fontSize: 14,
     color: '#007AFF',
     fontWeight: '500',
+    margin: 10,
   },
   logoutLink: {
     fontSize: 14,
     color: '#FF3B30',
     fontWeight: '500',
+    marginRight: 16,
   },
   userRow: {
     marginBottom: 8,
@@ -277,6 +337,7 @@ const styles = StyleSheet.create({
   userText: {
     fontSize: 13,
     color: '#444',
+    marginLeft: 16,
   },
   checkinBanner: {
     paddingVertical: 6,
@@ -295,9 +356,10 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: '#ffffff',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 10,
+    margin: 16,
+    borderRadius: 12,
+    padding: 16,           // more inner padding inside each card
+    marginBottom: 16,      // more space between cards
     shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowRadius: 4,
@@ -334,4 +396,29 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontWeight: '600',
   },
+  menuIcon: {
+  fontSize: 22,
+  paddingRight: 12,
+  marginLeft: 6,
+},
+
+menuContainer: {
+  backgroundColor: '#ffffff',
+  borderRadius: 8,
+  paddingVertical: 8,
+  margin: 12,
+  paddingHorizontal: 12,
+  shadowColor: '#000',
+  shadowOpacity: 0.08,
+  shadowRadius: 4,
+  shadowOffset: { width: 0, height: 2 },
+  elevation: 3,
+},
+
+menuItem: {
+  fontSize: 16,
+  paddingVertical: 6,
+  color: '#333',
+},
+
 });
