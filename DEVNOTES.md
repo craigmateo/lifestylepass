@@ -1,139 +1,164 @@
 # LifestylePass – Dev Notes
 
-## 🧱 Project Overview
-LifestylePass is a full-stack project using:
-- **Backend:** Laravel (PHP)  
-- **Frontend:** Expo React Native (TypeScript)  
-- **Database:** MySQL (local via Workbench)
+## Overview
+LifestylePass is a Laravel + Expo React Native project that allows users to:
 
-The app allows users to:
-- Sign up / log in (Laravel Sanctum tokens)
+- Create accounts and log in
 - View venues
 - Check in at venues
 - View check-in history
-- Access a user profile
-- Log out
+- View/edit profile
+- See upcoming activities
+- Navigate using a hamburger menu
+- (Temporary) View a "Map Coming Soon" screen
+- Automatic city detection (backend ready, frontend in progress)
 
----
+This file tracks architecture, conventions, endpoints, and current progress.
 
-## ⚙️ Backend Setup (Laravel)
-1. Start backend:  
-   cd backend  
-   php artisan serve  
-   → Serves API at http://127.0.0.1:8000  
-   (For mobile devices: use LAN IP, e.g. http://192.168.x.x:8000)
+------------------------------------------------------------
 
-2. Key commands:  
-   php artisan migrate  
-   php artisan tinker  
-   php artisan route:list  
+## Backend (Laravel)
 
-3. Example routes:  
-   - POST /api/signup  
-   - POST /api/login  
-   - GET /api/venues  
-   - POST /api/checkins  
-   - GET /api/profile  
+### Routes Summary
+- POST /api/signup → AuthController@signup
+- POST /api/login → AuthController@login
+- GET /api/me → AuthController@me  (requires token)
+- POST /api/checkins → CheckinController@store (token)
+- GET /api/checkins → CheckinController@index (token)
+- GET /api/venues → VenueController@index
+  - Accepts ?city=CityName
+- GET /api/cities → VenueController@cities
+- GET /api/activities → ActivityController@index
+- GET /api/venues/{venue}/activities → ActivityController@byVenue
 
-4. Database: MySQL  
-   - Database config in .env  
-   - Can view/manage via MySQL Workbench.
+### Database Models
+- User  
+- Venue (id, name, address, type, city, owner_id)
+- Checkin (id, user_id, venue_id, created_at)
+- Activity (venue_id, title, start_time, end_time, capacity)
 
----
+### Notes
+- All auth uses Laravel Sanctum token auth.
+- CORS enabled for Expo development.
+- `/api/me` verifies token and returns user info.
+- Logging in + signing up both return a token.
 
-## 📱 Frontend Setup (Expo / React Native)
-1. Start frontend:  
-   cd mobile  
-   npm start  
-   → Opens Expo Dev Tools  
-   - Press w for web  
-   - Or scan QR with Expo Go
+------------------------------------------------------------
 
-2. Local API base URL:  
-   - Defined in mobile/config.ts  
-   - For real device: update to your LAN IP  
-     Example: export const API_BASE_URL = 'http://192.168.80.1:8000/api';
+## Frontend (Expo React Native)
 
-3. Core screens:  
-   - (tabs)/index.tsx → Venues list  
-   - (tabs)/history.tsx → My Check-ins  
-   - (tabs)/profile.tsx → Profile  
-   - login.tsx → Log In / Sign Up  
-   - Shared layout includes a hamburger menu
+### File Structure (simplified)
+- app/
+  - (tabs)/index.tsx       → Venues screen (Home)
+  - login.tsx              → Login / Signup screen
+  - history.tsx            → Check-in history
+  - profile.tsx            → Profile view/edit
+  - activities.tsx         → Activities list
+  - scan.tsx               → QR placeholder
+  - map.tsx                → Mobile map screen (temporary: venue list)
+  - map.web.tsx            → Web fallback “Map not available”
+- utils/auth.ts            → Token storage
+- config.ts                → API_BASE_URL
 
----
+### Token Storage
+Uses `@react-native-async-storage/async-storage`:
+- saveToken(token)
+- getToken()
+- clearToken()
 
-## 👥 Authentication Flow
-- **Signup/Login:** Communicates with Laravel API.  
-- **Token storage:** AsyncStorage via utils/auth.ts  
-- **Auto-login:** On app start, stored token is used for authenticated requests.  
-- **Logout:** Clears token and redirects to login.
+### Login / Signup
+- Combined into one screen
+- Button toggles login ↔ signup
+- Signup validates:
+  - name not empty
+  - password min 8 chars
+  - password == confirm
+- Works on device + web
 
----
+### Venues Screen
+- Loads venues on mount
+- Displays venue cards
+- Can trigger a check-in
+- Hamburger menu controls navigation
+- Shows login/logout in header
+- Detects cities (in progress)
 
-## 🆕 Recent Additions (Nov 2025)
-✅ **Signup now functional**  
-- Uses same fetch logic as Quick Test  
-- Returns and stores token (or auto-logins if token missing)  
-- Displays validation errors clearly (e.g., email taken)
+### Activities Screen
+- Fetches upcoming activities
+- Sorted by date
+- Linked to venue
 
-✅ **Dev-friendly autofill**  
-- In dev mode, signup auto-fills fields for quick testing  
-- `demo${Date.now()}@example.com` ensures unique emails
+### Map Screen
+Because react-native-maps does NOT work on Expo Web:
+- `map.tsx` (mobile): shows a list of venues + placeholder map message  
+- `map.web.tsx` (web): simple explanation screen  
 
-✅ **Improved validation**  
-- Checks for missing fields, short passwords, mismatched passwords  
-- Displays alerts with specific causes
+This avoids runtime errors on web.
 
-✅ **UI improvements**  
-- Added padding/margins to venue cards  
-- Switched from tab bar to hamburger menu for better mobile UX
+------------------------------------------------------------
 
-✅ **Profile Page**  
-- Displays user info fetched from `/api/profile`  
-- Protected route (requires valid token)
+## Current Limitations / Known Issues
+- No real map yet (Google Maps requires EAS build native config)
+- City filtering UI in progress
+- Activities list UI basic
+- No push notifications
+- No QR scanning yet
 
----
+------------------------------------------------------------
 
-## 🧪 Testing APIs Manually
-**PowerShell Example:**
+## Recent Fixes
+- Reorganized controllers into App\Http\Controllers\Api\
+- Fixed namespace issues causing HTTP 500
+- Fixed login “route not found”
+- Signup validation issue resolved
+- Added QuickSignup test button
+- Fixed menu navigation
+- Fixed map crash on web by adding map.web.tsx
+- Updated Venues UI padding and layout
 
-Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/signup" `
+------------------------------------------------------------
+
+## Next Possible Tasks
+1. Add real map (native-only via EAS build)
+2. Add device-based nearest venue sorting
+3. Improve venue detail screen
+4. Add booking system for activities
+5. Add user subscriptions / membership plans
+6. Add admin dashboard (web)
+7. Add QR-code checkin workflow
+8. Add favorites / saved venues
+
+------------------------------------------------------------
+
+## Development Commands
+
+### Backend
+php artisan serve  
+php artisan migrate  
+php artisan tinker  
+
+### Frontend (Expo)
+npm start  
+Press "w" for web  
+Scan QR for mobile  
+
+------------------------------------------------------------
+
+## API Testing Snippet (PowerShell)
+$signup = Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/signup" `
   -Method POST `
-  -Headers @{ "Content-Type" = "application/json" } `
+  -Headers @{ "Content-Type" = "application/json"; "Accept" = "application/json" } `
   -Body '{
-    "name": "Craig Tester",
-    "email": "craig@example.com",
+    "name": "Test User",
+    "email": "test@example.com",
     "password": "secret1234"
   }'
 
----
+------------------------------------------------------------
 
-## 🧰 Development Shortcuts
-- Quick signup test button available in Auth screen for dev.  
-- Autofill dev accounts with:  
-  `const isDev = process.env.NODE_ENV === 'development';`  
-- Optional “Use Demo Sign-Up” button for testing user creation.
-
----
-
-## 🚀 Next Steps
-- [ ] Improve error modals (instead of alerts)  
-- [ ] Add QR scan screen (`/scan`) for real venue check-ins  
-- [ ] Add profile editing  
-- [ ] Prepare `.env.production` and deployment config  
-- [ ] Create seed data for venues  
-- [ ] Hook up real backend hosting (e.g., Forge or Laravel Vapor)
-
----
-
-## 🗂️ Git Reminders
-- `.env` and `node_modules` ignored.  
-- Use `.gitignore` that covers:  
-  - Laravel defaults  
-  - Expo / React Native artifacts  
-  - OS + IDE files
-
----
-
-_Last updated: Nov 2025_
+## Notes to Developers
+- Always check Laravel logs: storage/logs/laravel.log
+- When mobile and API can’t connect:  
+  - ensure Expo shows correct LAN IP  
+  - update API_BASE_URL accordingly  
+- Remember: React Native async functions require "await" inside functions marked async
