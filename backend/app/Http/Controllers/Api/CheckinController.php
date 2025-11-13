@@ -36,4 +36,17 @@ class CheckinController extends Controller
 
         return response()->json($checkins);
     }
+
+    public function index(Request $request)
+    {
+        $user = $request->user(); // via sanctum
+
+        $items = Checkin::with('venue:id,name,address,city')
+            ->where('user_id', $user->id)
+            ->orderByDesc('created_at')
+            ->limit(50)
+            ->get();
+
+        return response()->json($items);
+    }
 }

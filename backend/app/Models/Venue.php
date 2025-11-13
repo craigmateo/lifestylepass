@@ -9,9 +9,21 @@ class Venue extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'name',
-        'address',
-        'type',
-    ];
+protected $fillable = [
+    'name',
+    'address',
+    'type',
+    'city',
+    'owner_id',
+    'latitude',
+    'longitude',
+];
+
+    public function activities()
+{
+    return $this->hasMany(Activity::class);
 }
+
+}
+
+

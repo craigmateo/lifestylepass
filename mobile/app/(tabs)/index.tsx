@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
+import MapView, { Marker } from 'react-native-maps';
 import {
   SafeAreaView,
   View,
@@ -8,17 +9,19 @@ import {
   StyleSheet,
   Alert,
   TouchableOpacity,
+  ScrollView,
 } from 'react-native';
 import { Link, useRouter } from 'expo-router';
+import * as Location from 'expo-location';
 import { getToken, clearToken } from '../../utils/auth';
-
 import { API_BASE_URL } from '../../config';
 
 type Venue = {
   id: number;
   name: string;
   address: string;
-  type?: string | null;
+  type?: string;
+  city?: string;
 };
 
 type MeResponse = {
@@ -27,85 +30,135 @@ type MeResponse = {
   email: string;
 };
 
-const HomeScreen: React.FC = () => {
+export default function VenuesScreen() {
   const router = useRouter();
 
+  // Auth / user
+  const [me, setMe] = useState<MeResponse | null>(null);
+  const [loadingMe, setLoadingMe] = useState<boolean>(true);
+
+  // Venues
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loadingVenues, setLoadingVenues] = useState<boolean>(true);
   const [venuesError, setVenuesError] = useState<string | null>(null);
 
-  const [me, setMe] = useState<MeResponse | null>(null);
-  const [loadingMe, setLoadingMe] = useState<boolean>(true);
+  // Cities
+  const [cities, setCities] = useState<string[]>([]);
+  const [selectedCity, setSelectedCity] = useState<string | null>(null);
+  const [detectingCity, setDetectingCity] = useState(false);
 
-  const [lastCheckinMessage, setLastCheckinMessage] = useState<string | null>(
-    null
-  );
-
+  // UI
   const [menuOpen, setMenuOpen] = useState(false);
-  
-  useEffect(() => {
-    const loadVenues = async () => {
+  const [lastCheckinMessage, setLastCheckinMessage] = useState<string | null>(null);
+
+  // ---- Loaders ----
+  const loadCities = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/cities`);
+      if (!res.ok) throw new Error(`Cities load failed ${res.status}`);
+      const data = await res.json();
+      setCities(data);
+      if (!selectedCity && data.length > 0) {
+        setSelectedCity(data[0]);
+      }
+    } catch (e) {
+      console.warn('Failed to load cities:', e);
+    }
+  }, [selectedCity]);
+
+  const loadVenues = useCallback(
+    async (city?: string | null) => {
       try {
         setLoadingVenues(true);
         setVenuesError(null);
 
-        const res = await fetch(`${API_BASE_URL}/venues`);
-        console.log('Venues response status:', res.status);
+        const url = city
+          ? `${API_BASE_URL}/venues?city=${encodeURIComponent(city)}`
+          : `${API_BASE_URL}/venues`;
 
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}`);
-        }
+        const res = await fetch(url, { headers: { Accept: 'application/json' } });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
         const data = (await res.json()) as Venue[];
-        console.log('Venues data from API:', data);
         setVenues(data);
       } catch (err: any) {
-        console.log('Venues fetch error:', err);
         setVenuesError(err.message ?? 'Unknown error');
       } finally {
         setLoadingVenues(false);
       }
-    };
+    },
+    []
+  );
 
-    loadVenues();
+  const loadMe = useCallback(async () => {
+    try {
+      setLoadingMe(true);
+      const token = await getToken();
+      if (!token) {
+        setMe(null);
+        return;
+      }
+      const res = await fetch(`${API_BASE_URL}/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+        },
+      });
+      if (!res.ok) {
+        setMe(null);
+        return;
+      }
+      const data = (await res.json()) as MeResponse;
+      setMe(data);
+    } catch {
+      setMe(null);
+    } finally {
+      setLoadingMe(false);
+    }
   }, []);
 
   useEffect(() => {
-    const loadMe = async () => {
-      try {
-        setLoadingMe(true);
-        const token = await getToken();
-        if (!token) {
-          setMe(null);
-          return;
-        }
+    loadCities();
+  }, [loadCities]);
 
-        const res = await fetch(`${API_BASE_URL}/me`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
-          },
-        });
+  useEffect(() => {
+    loadVenues(selectedCity);
+  }, [selectedCity, loadVenues]);
 
-        console.log('Me status:', res.status);
-
-        if (!res.ok) {
-          setMe(null);
-          return;
-        }
-
-        const data = (await res.json()) as MeResponse;
-        setMe(data);
-      } catch (err) {
-        console.log('Error loading /me:', err);
-        setMe(null);
-      } finally {
-        setLoadingMe(false);
-      }
-    };
-
+  useEffect(() => {
     loadMe();
-  }, []);
+  }, [loadMe]);
+
+  // ---- Actions ----
+  const handleDetectCity = async () => {
+    try {
+      setDetectingCity(true);
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission required', 'Location permission is needed to detect your city.');
+        return;
+      }
+      const pos = await Location.getCurrentPositionAsync({});
+      const results = await Location.reverseGeocodeAsync({
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+      });
+      const cityName = results[0]?.city || results[0]?.subregion || null;
+      if (cityName) {
+        if (cities.includes(cityName)) {
+          setSelectedCity(cityName);
+        } else {
+          Alert.alert('City not found', `Detected ${cityName}, but no venues are listed for that city yet.`);
+        }
+      } else {
+        Alert.alert('Could not detect city');
+      }
+    } catch (e: any) {
+      Alert.alert('Location error', e.message ?? 'Unable to detect city');
+    } finally {
+      setDetectingCity(false);
+    }
+  };
 
   const handleCheckin = async (venue: Venue) => {
     try {
@@ -125,28 +178,19 @@ const HomeScreen: React.FC = () => {
         body: JSON.stringify({ venue_id: venue.id }),
       });
 
-      console.log('Check-in status:', res.status);
-
       if (!res.ok) {
         let errData: any = null;
         try {
           errData = await res.json();
-        } catch (e) {}
-        console.log('Check-in error body:', errData);
-
-        const message =
-          errData?.message || `Check-in failed with status ${res.status}`;
+        } catch {}
+        const message = errData?.message || `Check-in failed with status ${res.status}`;
         throw new Error(message);
       }
-
-      const data = await res.json();
-      console.log('Check-in success body:', data);
 
       const msg = `Checked in at "${venue.name}" (id ${venue.id})`;
       setLastCheckinMessage(msg);
       Alert.alert('Check-in successful', msg);
     } catch (err: any) {
-      console.log('Check-in exception:', err);
       Alert.alert('Check-in error', err.message ?? 'Unknown error');
     }
   };
@@ -158,100 +202,99 @@ const HomeScreen: React.FC = () => {
       setLastCheckinMessage(null);
       Alert.alert('Logged out', 'You have been logged out.');
       router.replace('/login');
-    } catch (err) {
-      console.log('Logout error:', err);
+    } catch {
       Alert.alert('Logout error', 'Something went wrong while logging out.');
     }
   };
 
+  // ---- UI ----
+  const renderVenue = ({ item }: { item: Venue }) => (
+    <View style={styles.card}>
+      <Text style={styles.name}>{item.name}</Text>
+      <Text style={styles.address}>
+        {item.city ? `${item.city} · ${item.address}` : item.address}
+      </Text>
+      {!!item.type && <Text style={styles.type}>{item.type}</Text>}
+
+      <TouchableOpacity style={styles.checkinButton} onPress={() => handleCheckin(item)}>
+        <Text style={styles.checkinButtonText}>Check in</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header with title + login/logout */}
+      {/* Header */}
       <View style={styles.headerRow}>
-      <TouchableOpacity onPress={() => setMenuOpen((prev) => !prev)}>
-        <Text style={styles.menuIcon}>☰</Text>
-      </TouchableOpacity>
-
-      <Text style={styles.title}>Lifestyle Pass Venues</Text>
-
-      {me ? (
-        <TouchableOpacity onPress={handleLogout}>
-          <Text style={styles.logoutLink}>Logout</Text>
+        <TouchableOpacity onPress={() => setMenuOpen((prev) => !prev)}>
+          <Text style={styles.menuIcon}>☰</Text>
         </TouchableOpacity>
-      ) : (
-        <Link href="/login" style={styles.loginLink}>
-          Login
-        </Link>
-      )}
-    </View>
 
-      {/* User info row */}
+        <Text style={styles.title}>Lifestyle Pass Venues</Text>
+
+        {me ? (
+          <TouchableOpacity onPress={handleLogout}>
+            <Text style={styles.logoutLink}>Logout</Text>
+          </TouchableOpacity>
+        ) : (
+          <Link href="/login" style={styles.loginLink}>
+            Login
+          </Link>
+        )}
+      </View>
+
+      {/* User status */}
       <View style={styles.userRow}>
         {loadingMe ? (
           <Text style={styles.userText}>Checking login status…</Text>
         ) : me ? (
-          <Text style={styles.userText}>
-            Logged in as {me.name} ({me.email})
-          </Text>
+          <Text style={styles.userText}>Logged in as {me.name} ({me.email})</Text>
         ) : (
           <Text style={styles.userText}>Not logged in</Text>
         )}
       </View>
 
-{menuOpen && (
-  <View style={styles.menuContainer}>
-    <Text
-      style={styles.menuItem}
-      onPress={() => {
-        router.replace('/');
-        setMenuOpen(false);
-      }}
-    >
-      Venues
-    </Text>
+      {/* Hamburger menu */}
+      {menuOpen && (
+        <View style={styles.menuContainer}>
+          <Text style={styles.menuItem} onPress={() => { router.replace('/'); setMenuOpen(false); }}>Venues</Text>
+          <Text style={styles.menuItem} onPress={() => { router.replace('/history'); setMenuOpen(false); }}>My Check-ins</Text>
+          <Text style={styles.menuItem} onPress={() => { router.replace('/scan'); setMenuOpen(false); }}>Scan QR</Text>
+          <Text style={styles.menuItem} onPress={() => { router.replace('/activities'); setMenuOpen(false); }}>Activities</Text>
+          <Text style={styles.menuItem} onPress={() => { router.replace('/profile'); setMenuOpen(false); }}>Profile</Text>
+          <Text style={styles.menuItem} onPress={() => { router.replace('/login'); setMenuOpen(false); }}>Login</Text>
+<Text
+  style={styles.menuItem}
+  onPress={() => {
+    router.replace('../map');
+    setMenuOpen(false);
+  }}
+>
+  Map
+</Text>
 
-    <Text
-      style={styles.menuItem}
-      onPress={() => {
-        router.replace('/history');
-        setMenuOpen(false);
-      }}
-    >
-      My Check-ins
-    </Text>
 
-    {/* ✅ New item for QR scanner */}
-    <Text
-      style={styles.menuItem}
-      onPress={() => {
-        router.replace('/scan');
-        setMenuOpen(false);
-      }}
-    >
-      Scan QR
-    </Text>
+        </View>
+      )}
 
-    <Text
-      style={styles.menuItem}
-      onPress={() => {
-        router.replace('/profile');
-        setMenuOpen(false);
-      }}
-    >
-      Profile
-    </Text>
-
-    <Text
-      style={styles.menuItem}
-      onPress={() => {
-        router.replace('/login');
-        setMenuOpen(false);
-      }}
-    >
-      Login
-    </Text>
-  </View>
-)}
+      {/* City selector */}
+      <View style={styles.cityRow}>
+        <Text style={styles.cityLabel}>City:</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 6 }}>
+          {cities.map((c) => (
+            <Text
+              key={c}
+              style={[styles.chip, c === selectedCity && styles.chipActive]}
+              onPress={() => setSelectedCity(c)}
+            >
+              {c}
+            </Text>
+          ))}
+        </ScrollView>
+        <Text style={styles.detectBtn} onPress={handleDetectCity}>
+          {detectingCity ? 'Detecting…' : 'Detect City'}
+        </Text>
+      </View>
 
       {/* Last check-in banner */}
       {lastCheckinMessage && (
@@ -260,38 +303,22 @@ const HomeScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Loading / error / list */}
-      {loadingVenues && (
+      {/* Content */}
+      {loadingVenues ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" />
           <Text>Loading venues…</Text>
         </View>
-      )}
-
-      {!loadingVenues && venuesError && (
+      ) : venuesError ? (
         <View style={styles.center}>
           <Text style={styles.errorText}>Error: {venuesError}</Text>
         </View>
-      )}
-
-      {!loadingVenues && !venuesError && (
+      ) : (
         <FlatList
           data={venues}
           keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => (
-            <View style={styles.card}>
-              <Text style={styles.name}>{item.name}</Text>
-              <Text style={styles.address}>{item.address}</Text>
-              {!!item.type && <Text style={styles.type}>{item.type}</Text>}
-
-              <TouchableOpacity
-                style={styles.checkinButton}
-                onPress={() => handleCheckin(item)}
-              >
-                <Text style={styles.checkinButtonText}>Check in</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+          renderItem={renderVenue}
+          contentContainerStyle={{ paddingBottom: 24 }}
           ListEmptyComponent={
             <View style={styles.center}>
               <Text>No venues found.</Text>
@@ -301,15 +328,13 @@ const HomeScreen: React.FC = () => {
       )}
     </SafeAreaView>
   );
-};
-
-export default HomeScreen;
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 32,        // a bit more top padding
-    paddingHorizontal: 24, // more space from left/right edges
+    paddingTop: 32,
+    paddingHorizontal: 24,
     margin: 16,
     backgroundColor: '#f5f5f5',
   },
@@ -344,6 +369,46 @@ const styles = StyleSheet.create({
     color: '#444',
     marginLeft: 16,
   },
+  menuIcon: {
+    fontSize: 22,
+    paddingRight: 12,
+    marginLeft: 6,
+  },
+  menuContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    paddingVertical: 8,
+    margin: 12,
+    paddingHorizontal: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  menuItem: {
+    fontSize: 16,
+    paddingVertical: 6,
+    color: '#333',
+  },
+  cityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 10,
+  },
+  cityLabel: { fontSize: 14, color: '#555' },
+  chip: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    marginRight: 8,
+  },
+  chipActive: { backgroundColor: '#007AFF20', borderColor: '#007AFF' },
+  detectBtn: { marginLeft: 'auto', color: '#007AFF' },
   checkinBanner: {
     paddingVertical: 6,
     paddingHorizontal: 10,
@@ -351,45 +416,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#e0f7e9',
     marginBottom: 10,
   },
-  checkinText: {
-    fontSize: 13,
-    color: '#2e7d32',
-  },
-  center: {
-    marginTop: 20,
-    alignItems: 'center',
-  },
+  checkinText: { fontSize: 13, color: '#2e7d32' },
+  center: { marginTop: 20, alignItems: 'center' },
   card: {
     backgroundColor: '#ffffff',
-    margin: 16,
     borderRadius: 12,
-    padding: 16,           // more inner padding inside each card
-    marginBottom: 16,      // more space between cards
+    padding: 16,
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
-  name: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  address: {
-    fontSize: 14,
-    color: '#555',
-  },
-  type: {
-    marginTop: 4,
-    fontSize: 12,
-    fontStyle: 'italic',
-    color: '#888',
-  },
-  errorText: {
-    color: 'red',
-    fontSize: 14,
-  },
+  name: { fontSize: 18, fontWeight: '600', marginBottom: 4 },
+  address: { fontSize: 14, color: '#555' },
+  type: { marginTop: 4, fontSize: 12, fontStyle: 'italic', color: '#888' },
+  errorText: { color: 'red', fontSize: 14 },
   checkinButton: {
     marginTop: 10,
     paddingVertical: 8,
@@ -397,33 +440,5 @@ const styles = StyleSheet.create({
     backgroundColor: '#007AFF',
     alignItems: 'center',
   },
-  checkinButtonText: {
-    color: '#ffffff',
-    fontWeight: '600',
-  },
-  menuIcon: {
-  fontSize: 22,
-  paddingRight: 12,
-  marginLeft: 6,
-},
-
-menuContainer: {
-  backgroundColor: '#ffffff',
-  borderRadius: 8,
-  paddingVertical: 8,
-  margin: 12,
-  paddingHorizontal: 12,
-  shadowColor: '#000',
-  shadowOpacity: 0.08,
-  shadowRadius: 4,
-  shadowOffset: { width: 0, height: 2 },
-  elevation: 3,
-},
-
-menuItem: {
-  fontSize: 16,
-  paddingVertical: 6,
-  color: '#333',
-},
-
+  checkinButtonText: { color: '#ffffff', fontWeight: '600' },
 });

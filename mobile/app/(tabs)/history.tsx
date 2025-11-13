@@ -173,6 +173,13 @@ export default function HistoryScreen() {
     </Text>
 
     <Text
+  style={styles.menuItem}
+  onPress={() => { router.replace('/activities'); setMenuOpen(false); }}
+>
+  Activities
+</Text>
+
+    <Text
       style={styles.menuItem}
       onPress={() => {
         router.replace('/profile');
