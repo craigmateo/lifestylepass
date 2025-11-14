@@ -1,164 +1,280 @@
-# LifestylePass – Dev Notes
+# Developer Notes – Lifestyle Pass
 
-## Overview
-LifestylePass is a Laravel + Expo React Native project that allows users to:
+This document contains ongoing development notes, architecture decisions, and implementation details for both the backend (Laravel) and mobile app (Expo + React Native).
 
-- Create accounts and log in
-- View venues
-- Check in at venues
-- View check-in history
-- View/edit profile
-- See upcoming activities
-- Navigate using a hamburger menu
-- (Temporary) View a "Map Coming Soon" screen
-- Automatic city detection (backend ready, frontend in progress)
+---
 
-This file tracks architecture, conventions, endpoints, and current progress.
+# 🧱 OVERVIEW
 
-------------------------------------------------------------
+Lifestyle Pass is a fitness membership platform similar to Urban Sports Club.
 
-## Backend (Laravel)
+Includes:
 
-### Routes Summary
-- POST /api/signup → AuthController@signup
-- POST /api/login → AuthController@login
-- GET /api/me → AuthController@me  (requires token)
-- POST /api/checkins → CheckinController@store (token)
-- GET /api/checkins → CheckinController@index (token)
-- GET /api/venues → VenueController@index
-  - Accepts ?city=CityName
-- GET /api/cities → VenueController@cities
-- GET /api/activities → ActivityController@index
-- GET /api/venues/{venue}/activities → ActivityController@byVenue
+- Laravel backend (REST API + Sanctum authentication)
+- MySQL database
+- React Native mobile app (Expo Router)
+- Venue browsing & check-ins
+- Activities with schedule
+- Location filtering
+- Basic profile
+- Mobile-only map support
 
-### Database Models
-- User  
-- Venue (id, name, address, type, city, owner_id)
-- Checkin (id, user_id, venue_id, created_at)
-- Activity (venue_id, title, start_time, end_time, capacity)
+---
 
-### Notes
-- All auth uses Laravel Sanctum token auth.
-- CORS enabled for Expo development.
-- `/api/me` verifies token and returns user info.
-- Logging in + signing up both return a token.
+# 📡 BACKEND (LARAVEL API)
 
-------------------------------------------------------------
+## Folder Structure
 
-## Frontend (Expo React Native)
+backend/
+  app/
+    Http/
+      Controllers/
+        Api/
+  routes/
+    api.php
+  database/
+    migrations/
+    seeders/
 
-### File Structure (simplified)
-- app/
-  - (tabs)/index.tsx       → Venues screen (Home)
-  - login.tsx              → Login / Signup screen
-  - history.tsx            → Check-in history
-  - profile.tsx            → Profile view/edit
-  - activities.tsx         → Activities list
-  - scan.tsx               → QR placeholder
-  - map.tsx                → Mobile map screen (temporary: venue list)
-  - map.web.tsx            → Web fallback “Map not available”
-- utils/auth.ts            → Token storage
-- config.ts                → API_BASE_URL
+## Important Controllers
 
-### Token Storage
-Uses `@react-native-async-storage/async-storage`:
-- saveToken(token)
-- getToken()
-- clearToken()
+Api/AuthController.php  
+Handles:
+- signup
+- login
+- me (authenticated user info)
 
-### Login / Signup
-- Combined into one screen
-- Button toggles login ↔ signup
-- Signup validates:
-  - name not empty
-  - password min 8 chars
-  - password == confirm
-- Works on device + web
+Api/VenueController.php  
+- list venues
+- filter by city
+- show venue details
+- relationship: venue → activities
 
-### Venues Screen
-- Loads venues on mount
-- Displays venue cards
-- Can trigger a check-in
-- Hamburger menu controls navigation
-- Shows login/logout in header
-- Detects cities (in progress)
+ActivityController.php  
+- list activities (date range)
+- list activities by venue
+- simple POST /activities create route (admin use)
+- relationship: activity → venue
 
-### Activities Screen
-- Fetches upcoming activities
-- Sorted by date
-- Linked to venue
+CheckinController.php  
+- create a check-in
+- list user check-ins
 
-### Map Screen
-Because react-native-maps does NOT work on Expo Web:
-- `map.tsx` (mobile): shows a list of venues + placeholder map message  
-- `map.web.tsx` (web): simple explanation screen  
+## Authentication
 
-This avoids runtime errors on web.
+Using Laravel Sanctum:
 
-------------------------------------------------------------
+Users authenticate via:
 
-## Current Limitations / Known Issues
-- No real map yet (Google Maps requires EAS build native config)
-- City filtering UI in progress
-- Activities list UI basic
-- No push notifications
-- No QR scanning yet
+POST /api/signup  
+POST /api/login
 
-------------------------------------------------------------
+Returns:
 
-## Recent Fixes
-- Reorganized controllers into App\Http\Controllers\Api\
-- Fixed namespace issues causing HTTP 500
-- Fixed login “route not found”
-- Signup validation issue resolved
-- Added QuickSignup test button
-- Fixed menu navigation
-- Fixed map crash on web by adding map.web.tsx
-- Updated Venues UI padding and layout
+token: "X|xxxxxxxxxxxx"
 
-------------------------------------------------------------
+Mobile app stores token in AsyncStorage and passes it as:
 
-## Next Possible Tasks
-1. Add real map (native-only via EAS build)
-2. Add device-based nearest venue sorting
-3. Improve venue detail screen
-4. Add booking system for activities
-5. Add user subscriptions / membership plans
-6. Add admin dashboard (web)
-7. Add QR-code checkin workflow
-8. Add favorites / saved venues
+Authorization: Bearer TOKEN
 
-------------------------------------------------------------
+## Cities Endpoint
 
-## Development Commands
+Created dynamic city list from venues:
 
-### Backend
+GET /api/cities  
+Returns array of unique city names.
+
+## Activity Seeding
+
+Custom seeder generates 5 days of activities per venue:
+
+database/seeders/ActivitySeeder.php
+
+Run:
+
+php artisan db:seed
+
+---
+
+# 🗃 DATABASE MODELS
+
+User
+  id, name, email, password, etc.
+
+Venue
+  id, name, address, type, city
+
+Activity
+  venue_id, title, description, start_time, end_time, capacity
+
+Checkin
+  user_id, venue_id, created_at
+
+Relationships:
+
+Venue -> activities  
+User -> checkins  
+Venue -> checkins  
+
+---
+
+# 📱 MOBILE APP (EXPO REACT NATIVE)
+
+## Folder Structure
+
+mobile/
+  app/
+    index.tsx             (venues list)
+    login.tsx
+    activities.tsx
+    venue/[id].tsx        (venue detail & schedule)
+    profile.tsx
+    history.tsx
+    map.tsx               (mobile only)
+    map.web.tsx           (fallback for web)
+
+  utils/
+    auth.ts (getToken, saveToken, clearToken)
+
+  config.ts
+    API_BASE_URL
+
+## Token Storage (AsyncStorage)
+
+utils/auth.ts:
+
+saveToken(token)
+getToken()
+clearToken()
+
+Used throughout app for authenticated routes.
+
+## Expo Router Navigation
+
+Files in app/ become routes:
+
+/ → venues  
+/login → login/signup  
+/history → user check-ins  
+/profile → user profile  
+/venue/[id] → venue details  
+/activities → full activity list  
+/map → map view (mobile only)
+
+## Map Support
+
+Mobile uses:
+
+react-native-maps
+
+Web fallback:
+
+map.web.tsx  
+Shows “map not available on web”.
+
+## Venues Screen Improvements
+
+- Added padding
+- Added hamburger menu
+- Displays activities and check-ins
+- City selector with GPS city detection
+- Detects city using expo-location
+
+## Login / Signup Screen
+
+Features:
+
+- Login + Signup mode switching
+- Validation (password length, matching confirm)
+- Debug Quick Signup Test button
+- Autofill optional
+
+## Venue Detail Screen
+
+Features:
+
+- Shows venue info
+- Displays activities for selected date
+- Date selection bar
+- Tied to backend activities endpoint
+
+---
+
+# 🔧 ISSUES & FIXES
+
+## 1. Expo Go Network Request Failed
+Fixed by setting:
+
+API_BASE_URL = "http://YOUR_LOCAL_IP:8000/api"
+
+Not localhost.
+
+Ensure Windows firewall allows inbound port 8000.
+
+## 2. Activities returned empty
+Fix: Move ActivityController into Api folder and adjust namespace + import in api.php.
+
+## 3. Login route broke
+Fix: Correct namespace:
+
+use App\Http\Controllers\Api\AuthController;
+
+## 4. React Native Maps causing web errors
+Solution:
+- Add map.web.tsx fallback
+- Do not import react-native-maps on web
+
+---
+
+# 🚀 CURRENT FEATURES
+
+Backend
+- Auth (signup, login, me)
+- Venues (list, filter by city, details)
+- Activities (date range, by venue)
+- Check-ins (create, list)
+- Database seeding
+
+Mobile
+- Login / Signup
+- Venues list with padding + improved UI
+- Venue detail page with schedule
+- Activity list
+- Check-in button
+- Hamburger menu
+- Profile page
+- Check-in history
+- Map screen (mobile only)
+- City selection + autodetect
+
+---
+
+# 🎯 NEXT STEPS / ROADMAP
+
+- Add favorite venues
+- Add class booking (RSVP / capacity)
+- Payment integration
+- Push notifications
+- Offline mode
+- Admin dashboard (web)
+
+---
+
+# 📝 DEV WORKFLOW
+
+Backend:
+
 php artisan serve  
 php artisan migrate  
+php artisan db:seed  
 php artisan tinker  
 
-### Frontend (Expo)
-npm start  
-Press "w" for web  
-Scan QR for mobile  
+Mobile:
 
-------------------------------------------------------------
+npx expo start  
+Update API_BASE_URL  
+Scan QR in Expo Go  
 
-## API Testing Snippet (PowerShell)
-$signup = Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/signup" `
-  -Method POST `
-  -Headers @{ "Content-Type" = "application/json"; "Accept" = "application/json" } `
-  -Body '{
-    "name": "Test User",
-    "email": "test@example.com",
-    "password": "secret1234"
-  }'
+---
 
-------------------------------------------------------------
-
-## Notes to Developers
-- Always check Laravel logs: storage/logs/laravel.log
-- When mobile and API can’t connect:  
-  - ensure Expo shows correct LAN IP  
-  - update API_BASE_URL accordingly  
-- Remember: React Native async functions require "await" inside functions marked async
+# ✔ END OF DEV NOTES

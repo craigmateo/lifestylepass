@@ -1,336 +1,238 @@
-# Lifestyle Pass
+# Lifestyle Pass – Backend + Mobile App
 
-Lifestyle Pass is a pilot project for a subscription-based lifestyle and fitness pass.  
-Members can log in, browse partner venues, check in via the app, and view their usage history.
-
-This repo contains:
-
-- A **Laravel** backend (`/backend`) exposing a JSON REST API
-- A **React Native + Expo** mobile app (`/mobile`) that talks to the API
+Lifestyle Pass is a fitness membership app inspired by Urban Sports Club.  
+It includes a Laravel backend API and an Expo React Native mobile app (iOS, Android, Web).
 
 ---
 
-## Features
+## 📦 Tech Stack
 
-### Backend (Laravel API)
+**Backend**
+- Laravel 10
+- MySQL
+- Sanctum API tokens
+- Seeders for demo data
 
-- User registration and login
-- Token-based authentication with Laravel Sanctum
-- Venues listing
-- Check-ins for logged-in users
-- “My Check-ins” endpoint for user history
-- `/me` endpoint for profile data
-
-### Mobile App (React Native + Expo)
-
-- Login screen (email + password)
-- Venues screen:
-  - Shows login status (“Logged in as …”)
-  - Lists available venues from the backend
-  - Allows the user to **Check in** at a venue
-- My Check-ins screen:
-  - Shows a list of past check-ins (with venue and timestamp)
-  - Handles “not logged in” state gracefully
-- Profile screen:
-  - Shows name, email, and “member since” date (from `/me`)
-  - Placeholder for plan info
-- Navigation:
-  - No bottom tab bar
-  - **Hamburger menu** in the header for navigation between:
-    - Venues
-    - My Check-ins
-    - Profile
-    - Login / Logout
+**Frontend**
+- React Native (Expo)
+- expo-router
+- AsyncStorage for token storage
 
 ---
 
-## Project Structure
+# 🚀 Getting Started
 
-lifestylepass/
-├── backend/              # Laravel API
-│   ├── app/
-│   ├── database/
-│   ├── routes/
-│   │   └── api.php
-│   └── .env              # local environment (NOT committed)
-│
-├── mobile/               # React Native + Expo app
-│   ├── app/
-│   │   ├── (tabs)/
-│   │   │   ├── _layout.tsx   # Tabs config (tabs hidden, used for routing only)
-│   │   │   ├── index.tsx     # Venues screen (check-ins, logout, menu)
-│   │   │   ├── history.tsx   # My Check-ins screen
-│   │   │   └── profile.tsx   # Profile screen
-│   │   └── login.tsx         # Login screen
-│   ├── utils/
-│   │   └── auth.ts           # AsyncStorage helpers (save/get/clear token)
-│   ├── app.json
-│   └── package.json
-│
-├── dev_notes.md
-├── README.md
-└── .gitignore
+## 1. Clone the repository
+
+    git clone https://github.com/yourname/lifestylepass.git
+    cd lifestylepass
 
 ---
 
-## Backend Setup (Laravel)
+# 🖥 Backend Setup (Laravel API)
 
-### 1. Install dependencies
-
-From the `backend` folder:
+Go to backend folder:
 
     cd backend
+
+Install dependencies:
+
     composer install
 
-### 2. Environment configuration
-
-Copy the example env file:
+Copy environment file:
 
     cp .env.example .env
 
-Edit `.env` and set up at least:
-
-- Application key (run `php artisan key:generate`)
-- Database credentials
-
-Example (adjust based on your MySQL setup):
-
-    DB_CONNECTION=mysql
-    DB_HOST=127.0.0.1
-    DB_PORT=3306
-    DB_DATABASE=lifestylepass
-    DB_USERNAME=your_mysql_user
-    DB_PASSWORD=your_mysql_password
-
-Generate app key:
+Update DB credentials in `.env`  
+Then generate app key:
 
     php artisan key:generate
 
-### 3. Run migrations
-
-Create database tables:
+Run migrations:
 
     php artisan migrate
 
-(Optional) If you have seeders later, you can use:
+Seed demo data:
 
-    php artisan migrate --seed
+    php artisan db:seed
 
-### 4. Run the backend server
+Start backend server:
 
-Local dev (PC only):
+    php artisan serve --host=0.0.0.0 --port=8000
 
-    php artisan serve
-
-If you want to access the API from a **real phone on the same Wi-Fi**:
-
-    php artisan serve --host 0.0.0.0 --port 8000
-
-You may need to allow PHP through Windows Firewall.
+This exposes the API so your Expo Go app can access it over LAN.
 
 ---
 
-## Mobile App Setup (React Native + Expo)
+# 📱 Mobile App Setup (Expo React Native)
 
-### 1. Install dependencies
-
-From the `mobile` folder:
+Go to mobile folder:
 
     cd mobile
+
+Install dependencies:
+
     npm install
 
-### 2. Configure API base URL
+Start Expo:
 
-The mobile app uses a constant called `API_BASE_URL` in multiple files:
+    npx expo start
 
-- `mobile/app/(tabs)/index.tsx`
-- `mobile/app/(tabs)/history.tsx`
-- `mobile/app/(tabs)/profile.tsx`
-- `mobile/app/login.tsx`
-
-For development, set it to your backend URL:
-
-- If you are running everything on the **same machine** and using **Expo Web**, you can often use:
-
-      const API_BASE_URL = 'http://127.0.0.1:8000/api';
-
-- If you are testing on a **real device (Expo Go)**, use your PC’s LAN IP (found via `ipconfig`):
-
-      const API_BASE_URL = 'http://192.168.x.x:8000/api';
-
-Make sure the value is consistent across all the files above.
-
-### 3. AsyncStorage token helpers
-
-The file `mobile/utils/auth.ts` provides:
-
-- `saveToken(token: string)` — save auth token after login
-- `getToken()` — read auth token
-- `clearToken()` — log out
-
-These are used in the login, venues, history, and profile screens.
-
-### 4. Run Expo
-
-From the `mobile` folder:
-
-    npm start
-
-This will start the Metro bundler. You can:
-
-- Press `w` to open the app in a web browser, or
-- Scan the QR code with the **Expo Go** app on your phone
-
-Make sure:
-
-- Backend is running (`php artisan serve` or with `--host 0.0.0.0`)
-- Mobile `API_BASE_URL` matches the backend URL
+Open the Expo Go app on your phone and scan the QR code.
 
 ---
 
-## Usage Flow
+# 🌐 Configure API URL for Mobile App
 
-### 1. Start services
+Open:
 
-Backend:
+    mobile/config.ts
 
-    cd backend
-    php artisan serve --host 0.0.0.0 --port 8000
+Set your computer’s LAN IP:
 
-Frontend:
+    export const API_BASE_URL = "http://YOUR_LOCAL_IP:8000/api";
 
-    cd mobile
-    npm start
+Example:
 
-### 2. Create / confirm a test user
+    export const API_BASE_URL = "http://192.168.0.197:8000/api";
 
-You can sign up via the API or app:
+❗ Do *not* use localhost — phones cannot reach it.
 
-#### Via API (PowerShell example)
+---
+
+# 🗂 Project Structure
+
+    backend/
+        app/
+        routes/
+        database/
+        ...
+    mobile/
+        app/
+            (auth)
+            (tabs)
+            venue/[id].tsx
+            activities.tsx
+            map.tsx
+        utils/
+            auth.ts
+        config.ts
+
+---
+
+# 🔐 Auth Overview
+
+- Users authenticate via `/api/login` or `/api/signup`
+- Successful login returns a Sanctum token
+- Mobile app saves the token using AsyncStorage
+- Protected API routes require:
+
+    Authorization: Bearer TOKEN_HERE
+
+---
+
+# 🏋️ Venues & Activities
+
+## Venues example:
+
+    GET /api/venues
+    GET /api/venues?city=Berlin
+
+## Activities:
+
+    GET /api/activities
+    GET /api/venues/{id}/activities
+
+Seeder generates 5 days of activities per venue.
+
+---
+
+# 🗺 Map Support
+
+- Native map uses `react-native-maps`
+- Web fallback uses `map.web.tsx`
+
+Map works in Expo Go (iOS + Android)  
+Web shows a placeholder message.
+
+---
+
+# 🧪 Testing API in PowerShell
+
+Signup:
 
     Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/signup" `
       -Method POST `
-      -Headers @{
-        "Content-Type" = "application/json"
-        "Accept"       = "application/json"
-      } `
-      -Body '{
-        "name": "Craig App User",
-        "email": "craig2@example.com",
-        "password": "secret1234"
-      }'
+      -Headers @{ "Content-Type"="application/json" } `
+      -Body '{ "name":"Test", "email":"test@example.com", "password":"secret1234" }'
 
-Or create/reset in Tinker:
+Login:
 
-    php artisan tinker
-
-Inside Tinker:
-
-    use App\Models\User;
-    use Illuminate\Support\Facades\Hash;
-
-    $user = User::updateOrCreate(
-        ['email' => 'craig2@example.com'],
-        [
-            'name' => 'Craig App User',
-            'password' => Hash::make('secret1234'),
-        ]
-    );
-
-    $user;
-
-### 3. Log in through the app
-
-- Open the Expo app (web or Expo Go)
-- Go to **Login**
-- Use:
-
-      Email:    craig2@example.com
-      Password: secret1234
-
-- On success:
-  - Token is saved to AsyncStorage
-  - You’re redirected to the Venues screen
-  - The header shows “Logged in as …”
-
-### 4. Venues screen
-
-- Shows:
-  - App title
-  - Hamburger menu (☰) for navigation:
-    - Venues
-    - My Check-ins
-    - Profile
-    - Login / Logout
-  - Login status (“Logged in as …” or “Not logged in”)
-- Shows a list of venues from `/api/venues`
-- Each venue card has:
-  - Name
-  - Address
-  - Optional type
-  - **Check in** button
-
-When you tap **Check in**:
-
-- The app sends `POST /api/checkins` with your token and venue ID
-- On success:
-  - You see a success alert
-  - A new row is created in the `checkins` table
-
-### 5. My Check-ins screen
-
-- Accessed via the hamburger menu (**My Check-ins**)
-- Fetches `GET /api/my-checkins` with your token
-- Displays a list of past check-ins:
-  - Venue name
-  - Address
-  - Type
-  - Timestamp
-- If you are **not logged in**, shows a friendly message:
-  - “Please log in to view your check-ins.”
-
-### 6. Profile screen
-
-- Accessed via menu (**Profile**)
-- Fetches `GET /api/me` with your token
-- Displays:
-  - Name
-  - Email
-  - “Member since” (based on `created_at` if available)
-  - Placeholder plan info (“Lifestyle Pass (placeholder)”)
-- If not logged in, shows:
-  - “Please log in to view your profile.”
-
-### 7. Logout
-
-- On the Venues screen:
-  - The header shows a **Logout** button when logged in
-  - Tapping it:
-    - Calls `clearToken()` (removes token from AsyncStorage)
-    - Resets local state
-    - Sends you to `/login`
-- After logout:
-  - Venues shows “Not logged in”
-  - My Check-ins and Profile will prompt you to log in
+    Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/login" `
+      -Method POST `
+      -Headers @{ "Content-Type"="application/json" } `
+      -Body '{ "email":"test@example.com", "password":"secret1234" }'
 
 ---
 
-## Dev Notes
+# 🧹 .gitignore
 
-See `dev_notes.md` for:
+Laravel + Expo combined:
 
-- More detailed internal notes
-- Roadmap (short-term, medium-term, long-term)
-- Common dev commands
-- Rough deployment thoughts
+    /vendor/
+    /node_modules/
+    /public/storage
+    /storage/*.key
+
+    .env
+    .env.local
+    .env.development
+    .env.production
+
+    .DS_Store
+    Thumbs.db
+
+    *.log
+    *.sqlite
+    npm-debug.log
+    yarn-error.log
 
 ---
 
-## Next Ideas
+# ✔ Seed Demo Data
 
-- Add client-side validation to the login screen
-- Implement password change / account settings on Profile
-- Add Stripe-powered subscription logic to backend
-- Build a venue owner dashboard (web-based) for check-in and payout reports
-- Deploy backend and use a real HTTPS domain for the API
-- Prepare production builds of the mobile app (Android / iOS)
+Run:
+
+    php artisan db:seed
+
+Creates:
+
+- Demo venues
+- Demo activities (next 5 days)
+- Test user accounts
+
+---
+
+# 🧭 Routing Summary
+
+**Backend routes:**  
+Located in `routes/api.php`
+
+**Frontend routes:**  
+Via Expo Router inside `mobile/app/`
+
+---
+
+# ✔ Everything Working So Far
+
+- Login / signup
+- Token storage
+- Venues list
+- Check-ins
+- Activity list
+- Venue detail page with schedule
+- Hamburger menu
+- Basic profile page
+- Map (mobile only)
+- Seeders for demo activities
+- Expo Go compatibility
